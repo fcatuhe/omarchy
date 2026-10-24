@@ -53,4 +53,7 @@ assert(/text: root\.batteryIcon\(\)\n\s*labelText: root\.showPercentage && !vert
 assert(/openPanelIndicatorWidth:.*showPercentage.*button\.glyphPaintedWidth : 0/.test(panelSource), 'power spans the open-panel mark across the painted percentage block')
 assert(/IpcHandler[\s\S]*?function togglePercentage\(\) \{ root\.togglePercentage\(\) \}/.test(panelSource), 'power exposes togglePercentage over IPC')
 assert(/manageIpc: false/.test(panelSource), 'power owns its IPC handler so it can extend the target methods')
+assert(/command: \["omarchy-battery-charge-limit"\]/.test(panelSource), 'power reads the charge limit from omarchy-battery-charge-limit')
+assert(/chargeLimitAvailable: chargeLimitEnd > 0 && chargeLimitEnd < 100/.test(panelSource), 'power shows the charge limit choice only for a battery that has one')
+assert(/hasCursor: root\.cursorActive && root\.cursorSection === "profiles"/.test(panelSource), 'power keeps one cursor between the charge limit and the profiles')
 JS
