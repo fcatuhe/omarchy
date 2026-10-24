@@ -27,7 +27,7 @@ Panel {
   property string chargeLimitReadError: ""
   property string chargeLimitSetError: ""
   property bool discardChargeLimitRead: false
-  readonly property bool chargeLimitAvailable: chargeLimitEnd > 0 && chargeLimitEnd < 100
+  property bool chargeLimitAvailable: false
   readonly property var chargeLimitOptions: [
     { value: "on", label: Commons.I18n.formatNumber(chargeLimitEnd) + "%" },
     { value: "off", label: Commons.I18n.formatNumber(100) + "%" }
@@ -60,21 +60,14 @@ Panel {
     setProfile(profiles[profileIndex])
   }
 
-  // Up and Down move between the charge limit row and the profiles, when the
-  // battery has a charge limit; otherwise they walk the profiles as before.
   function moveCursor(dx, dy) {
     if (!cursorActive) { cursorActive = true; return }
-    if (chargeLimitAvailable && dy !== 0) {
-      if (dy < 0 && cursorSection !== "chargeLimit") {
-        cursorSection = "chargeLimit"
-        chargeLimitIndex = chargeLimitOn ? 0 : 1
-      } else if (dy > 0) {
-        cursorSection = "profiles"
-      }
-      return
-    }
-    if (cursorSection === "chargeLimit") chargeLimitIndex = Math.max(0, Math.min(chargeLimitOptions.length - 1, chargeLimitIndex + dx))
-    else selectProfileByDelta(dx !== 0 ? dx : dy)
+    var next = Model.moveCursor(
+      { section: cursorSection, chargeIndex: chargeLimitIndex, profileIndex: profileIndex },
+      dx, dy, { available: chargeLimitAvailable, on: chargeLimitOn }, profiles)
+    cursorSection = next.section
+    chargeLimitIndex = next.chargeIndex
+    profileIndex = next.profileIndex
   }
 
   function activateCursor() {
@@ -186,9 +179,10 @@ Panel {
   }
 
   function updateChargeLimit(raw) {
-    var info = Model.parseKeyValue(raw)
-    chargeLimitOn = info.limit === "on"
-    chargeLimitEnd = parseInt(info.end, 10) || 0
+    var limit = Model.parseChargeLimit(raw)
+    chargeLimitOn = limit.on
+    chargeLimitEnd = limit.end
+    chargeLimitAvailable = limit.available
   }
 
   function setChargeLimit(on) {

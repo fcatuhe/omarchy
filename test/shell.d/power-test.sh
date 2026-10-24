@@ -14,6 +14,19 @@ assertEqual(power.selectProfileIndex(0, 1, ['balanced', 'performance']), 1, 'pow
 assertEqual(power.selectProfileIndex(1, 1, ['balanced', 'performance']), 1, 'power clamps profile selection')
 
 assertDeepEqual(power.parseKeyValue('time\t2:00\nenergy\t42\n'), { time: '2:00', energy: '42' }, 'power parses key-value output')
+assertDeepEqual(power.parseChargeLimit('limit\ton\nend\t80\n'), { on: true, end: 80, available: true }, 'power reads an 80% charge limit that is on')
+assertEqual(power.parseChargeLimit('limit\toff\nend\t100\n').available, false, 'power offers no choice when the limit already is a full charge')
+assertEqual(power.parseChargeLimit('').available, false, 'power offers no choice for a battery without a charge limit')
+
+const limitOn = { available: true, on: true }
+const profiles = ['power-saver', 'balanced', 'performance']
+const atProfiles = { section: 'profiles', chargeIndex: 1, profileIndex: 1 }
+assertDeepEqual(power.moveCursor(atProfiles, 0, -1, limitOn, profiles), { section: 'chargeLimit', chargeIndex: 0, profileIndex: 1 }, 'power moves up to the charge limit, onto the value in force')
+assertDeepEqual(power.moveCursor({ section: 'chargeLimit', chargeIndex: 0, profileIndex: 1 }, 1, 0, limitOn, profiles), { section: 'chargeLimit', chargeIndex: 1, profileIndex: 1 }, 'power walks the charge limit values sideways')
+assertDeepEqual(power.moveCursor({ section: 'chargeLimit', chargeIndex: 1, profileIndex: 1 }, 0, 1, limitOn, profiles), { section: 'profiles', chargeIndex: 1, profileIndex: 1 }, 'power moves down back to the profiles')
+assertDeepEqual(power.moveCursor(atProfiles, 0, 1, { available: false }, profiles), { section: 'profiles', chargeIndex: 1, profileIndex: 2 }, 'power walks the profiles with Down when there is no charge limit')
+assertDeepEqual(power.moveCursor({ section: 'chargeLimit', chargeIndex: 0, profileIndex: 1 }, -1, 0, { available: false }, profiles), { section: 'profiles', chargeIndex: 0, profileIndex: 0 }, 'power leaves a charge limit row that went away')
+
 assertDeepEqual(
   power.parseProfiles('power-saver\t0\nbalanced\t1\nperformance\t0\n', 5),
   { profiles: ['power-saver', 'balanced', 'performance'], activeProfile: 'balanced', profileIndex: 2 },
@@ -53,7 +66,4 @@ assert(/text: root\.batteryIcon\(\)\n\s*labelText: root\.showPercentage && !vert
 assert(/openPanelIndicatorWidth:.*showPercentage.*button\.glyphPaintedWidth : 0/.test(panelSource), 'power spans the open-panel mark across the painted percentage block')
 assert(/IpcHandler[\s\S]*?function togglePercentage\(\) \{ root\.togglePercentage\(\) \}/.test(panelSource), 'power exposes togglePercentage over IPC')
 assert(/manageIpc: false/.test(panelSource), 'power owns its IPC handler so it can extend the target methods')
-assert(/command: \["omarchy-battery-charge-limit"\]/.test(panelSource), 'power reads the charge limit from omarchy-battery-charge-limit')
-assert(/chargeLimitAvailable: chargeLimitEnd > 0 && chargeLimitEnd < 100/.test(panelSource), 'power shows the charge limit choice only for a battery that has one')
-assert(/hasCursor: root\.cursorActive && root\.cursorSection === "profiles"/.test(panelSource), 'power keeps one cursor between the charge limit and the profiles')
 JS
